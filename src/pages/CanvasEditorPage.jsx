@@ -22,7 +22,6 @@ export function CanvasEditorPage() {
     activeTool,
     setActiveTool,
     selectedObject,
-    objectRevision,
     brushColor,
     setBrushColor,
     brushWidth,
@@ -134,7 +133,6 @@ export function CanvasEditorPage() {
 
         {/* Floating Contextual Properties Panel (Rendered ONLY when an object is selected) */}
         <PropertiesPanel
-          key={selectedObject ? `${selectedObject.type}_${objectRevision}` : 'none'}
           selectedObject={selectedObject}
           onUpdateProperty={updateSelectedObject}
         />

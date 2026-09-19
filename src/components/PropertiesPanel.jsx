@@ -31,18 +31,81 @@ export function PropertiesPanel({ selectedObject, onUpdateProperty }) {
   const isText = objType === 'i-text' || objType === 'text' || objType === 'textbox';
   const isPath = objType === 'path';
 
-  // Read current values directly from the object
-  const currentFill = selectedObject.fill || '#2563eb';
-  const currentStroke = selectedObject.stroke || '#111827';
-  const currentStrokeWidth = typeof selectedObject.strokeWidth === 'number' ? selectedObject.strokeWidth : 0;
-  const currentOpacity = Math.round((selectedObject.opacity ?? 1) * 100);
-  const currentFontSize = selectedObject.fontSize || 22;
-  const currentFontWeight = selectedObject.fontWeight || 'normal';
-  const currentFontStyle = selectedObject.fontStyle || 'normal';
-  const currentTextAlign = selectedObject.textAlign || 'left';
+  // Internal reactive states for buttery-smooth slider dragging
+  const [fill, setFill] = useState(selectedObject.fill || '#2563eb');
+  const [stroke, setStroke] = useState(selectedObject.stroke || '#111827');
+  const [strokeWidth, setStrokeWidth] = useState(
+    typeof selectedObject.strokeWidth === 'number' ? selectedObject.strokeWidth : 0
+  );
+  const [opacity, setOpacity] = useState(
+    Math.round((selectedObject.opacity ?? 1) * 100)
+  );
+  const [fontSize, setFontSize] = useState(selectedObject.fontSize || 22);
+  const [fontWeight, setFontWeight] = useState(selectedObject.fontWeight || 'normal');
+  const [fontStyle, setFontStyle] = useState(selectedObject.fontStyle || 'normal');
+  const [textAlign, setTextAlign] = useState(selectedObject.textAlign || 'left');
+
+  // Sync state whenever the active selected object reference changes
+  useEffect(() => {
+    if (selectedObject) {
+      setFill(selectedObject.fill || '#2563eb');
+      setStroke(selectedObject.stroke || '#111827');
+      setStrokeWidth(typeof selectedObject.strokeWidth === 'number' ? selectedObject.strokeWidth : 0);
+      setOpacity(Math.round((selectedObject.opacity ?? 1) * 100));
+      setFontSize(selectedObject.fontSize || 22);
+      setFontWeight(selectedObject.fontWeight || 'normal');
+      setFontStyle(selectedObject.fontStyle || 'normal');
+      setTextAlign(selectedObject.textAlign || 'left');
+    }
+  }, [selectedObject]);
+
+  const handleFillChange = (val) => {
+    setFill(val);
+    onUpdateProperty('fill', val);
+  };
+
+  const handleStrokeChange = (val) => {
+    setStroke(val);
+    onUpdateProperty('stroke', val);
+  };
+
+  const handleStrokeWidthChange = (val) => {
+    const num = Number(val);
+    setStrokeWidth(num);
+    onUpdateProperty('strokeWidth', num);
+  };
+
+  const handleOpacityChange = (val) => {
+    const num = Number(val);
+    setOpacity(num);
+    onUpdateProperty('opacity', num / 100);
+  };
+
+  const handleFontSizeChange = (val) => {
+    const num = Number(val);
+    setFontSize(num);
+    onUpdateProperty('fontSize', num);
+  };
+
+  const toggleBold = () => {
+    const next = fontWeight === 'bold' ? 'normal' : 'bold';
+    setFontWeight(next);
+    onUpdateProperty('fontWeight', next);
+  };
+
+  const toggleItalic = () => {
+    const next = fontStyle === 'italic' ? 'normal' : 'italic';
+    setFontStyle(next);
+    onUpdateProperty('fontStyle', next);
+  };
+
+  const handleAlignChange = (align) => {
+    setTextAlign(align);
+    onUpdateProperty('textAlign', align);
+  };
 
   return (
-    <aside className="absolute top-4 right-4 z-20 w-64 bg-white border border-neutral-200 rounded-xl shadow-lg p-3.5 flex flex-col gap-3 text-neutral-800 select-none animate-in fade-in duration-100">
+    <aside className="absolute top-4 right-4 z-20 w-64 bg-white border border-neutral-200 rounded-xl shadow-lg p-3.5 flex flex-col gap-3 text-neutral-800 select-none">
       {/* Object Type Tag Header */}
       <div className="flex items-center gap-1.5 pb-2 border-b border-neutral-100 text-xs font-semibold text-neutral-700">
         {objType === 'rect' && <Square className="w-3.5 h-3.5 text-blue-600" />}
@@ -57,16 +120,17 @@ export function PropertiesPanel({ selectedObject, onUpdateProperty }) {
         <div className="space-y-1.5">
           <div className="flex items-center justify-between text-[11px] font-medium text-neutral-600">
             <span>Fill Color</span>
-            <span className="font-mono text-[10px] text-neutral-400 uppercase">{currentFill}</span>
+            <span className="font-mono text-[10px] text-neutral-400 uppercase">{fill}</span>
           </div>
 
           <div className="flex items-center gap-1.5 flex-wrap">
             {PRESET_COLORS.map((color) => (
               <button
                 key={color}
-                onClick={() => onUpdateProperty('fill', color)}
+                type="button"
+                onClick={() => handleFillChange(color)}
                 className={`w-5 h-5 rounded-md border transition-transform ${
-                  currentFill === color
+                  fill === color
                     ? 'scale-110 border-blue-600 ring-1 ring-blue-600 shadow-sm'
                     : 'border-neutral-200 hover:scale-105'
                 }`}
@@ -75,8 +139,8 @@ export function PropertiesPanel({ selectedObject, onUpdateProperty }) {
             ))}
             <input
               type="color"
-              value={currentFill.startsWith('#') ? currentFill : '#2563eb'}
-              onChange={(e) => onUpdateProperty('fill', e.target.value)}
+              value={fill.startsWith('#') ? fill : '#2563eb'}
+              onChange={(e) => handleFillChange(e.target.value)}
               className="w-5 h-5 rounded overflow-hidden cursor-pointer border-0 bg-transparent p-0"
               title="Custom Color"
             />
@@ -88,16 +152,17 @@ export function PropertiesPanel({ selectedObject, onUpdateProperty }) {
       <div className="space-y-1.5">
         <div className="flex items-center justify-between text-[11px] font-medium text-neutral-600">
           <span>{isPath ? 'Stroke Color' : 'Border Color'}</span>
-          <span className="font-mono text-[10px] text-neutral-400 uppercase">{currentStroke}</span>
+          <span className="font-mono text-[10px] text-neutral-400 uppercase">{stroke}</span>
         </div>
 
         <div className="flex items-center gap-1.5 flex-wrap">
           {PRESET_COLORS.map((color) => (
             <button
               key={color}
-              onClick={() => onUpdateProperty('stroke', color)}
+              type="button"
+              onClick={() => handleStrokeChange(color)}
               className={`w-5 h-5 rounded-md border transition-transform ${
-                currentStroke === color
+                stroke === color
                   ? 'scale-110 border-blue-600 ring-1 ring-blue-600 shadow-sm'
                   : 'border-neutral-200 hover:scale-105'
               }`}
@@ -106,8 +171,8 @@ export function PropertiesPanel({ selectedObject, onUpdateProperty }) {
           ))}
           <input
             type="color"
-            value={currentStroke.startsWith('#') ? currentStroke : '#111827'}
-            onChange={(e) => onUpdateProperty('stroke', e.target.value)}
+            value={stroke.startsWith('#') ? stroke : '#111827'}
+            onChange={(e) => handleStrokeChange(e.target.value)}
             className="w-5 h-5 rounded overflow-hidden cursor-pointer border-0 bg-transparent p-0"
             title="Custom Color"
           />
@@ -117,15 +182,15 @@ export function PropertiesPanel({ selectedObject, onUpdateProperty }) {
         <div className="space-y-1 pt-1">
           <div className="flex justify-between text-[10px] text-neutral-500 font-medium">
             <span>Border Thickness</span>
-            <span className="font-mono text-neutral-700">{currentStrokeWidth}px</span>
+            <span className="font-mono text-neutral-700">{strokeWidth}px</span>
           </div>
           <input
             type="range"
             min="0"
             max="16"
             step="1"
-            value={currentStrokeWidth}
-            onChange={(e) => onUpdateProperty('strokeWidth', parseInt(e.target.value, 10))}
+            value={strokeWidth}
+            onChange={(e) => handleStrokeWidthChange(e.target.value)}
             className="w-full accent-blue-600 cursor-pointer h-1.5 bg-neutral-200 rounded"
           />
         </div>
@@ -137,15 +202,15 @@ export function PropertiesPanel({ selectedObject, onUpdateProperty }) {
           <div className="space-y-1">
             <div className="flex justify-between text-[10px] font-medium text-neutral-500">
               <span>Font Size</span>
-              <span className="font-mono text-neutral-700">{currentFontSize}px</span>
+              <span className="font-mono text-neutral-700">{fontSize}px</span>
             </div>
             <input
               type="range"
               min="12"
               max="96"
               step="1"
-              value={currentFontSize}
-              onChange={(e) => onUpdateProperty('fontSize', parseInt(e.target.value, 10))}
+              value={fontSize}
+              onChange={(e) => handleFontSizeChange(e.target.value)}
               className="w-full accent-blue-600 cursor-pointer h-1.5 bg-neutral-200 rounded"
             />
           </div>
@@ -153,12 +218,10 @@ export function PropertiesPanel({ selectedObject, onUpdateProperty }) {
           {/* Bold, Italic & Align Toggles */}
           <div className="flex items-center gap-1 pt-0.5">
             <button
-              onClick={() => {
-                const isBold = currentFontWeight === 'bold';
-                onUpdateProperty('fontWeight', isBold ? 'normal' : 'bold');
-              }}
+              type="button"
+              onClick={toggleBold}
               className={`p-1.5 rounded border text-xs font-bold transition-colors ${
-                currentFontWeight === 'bold'
+                fontWeight === 'bold'
                   ? 'bg-blue-50 border-blue-600 text-blue-600'
                   : 'bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-50'
               }`}
@@ -168,12 +231,10 @@ export function PropertiesPanel({ selectedObject, onUpdateProperty }) {
             </button>
 
             <button
-              onClick={() => {
-                const isItalic = currentFontStyle === 'italic';
-                onUpdateProperty('fontStyle', isItalic ? 'normal' : 'italic');
-              }}
+              type="button"
+              onClick={toggleItalic}
               className={`p-1.5 rounded border text-xs transition-colors ${
-                currentFontStyle === 'italic'
+                fontStyle === 'italic'
                   ? 'bg-blue-50 border-blue-600 text-blue-600'
                   : 'bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-50'
               }`}
@@ -187,9 +248,10 @@ export function PropertiesPanel({ selectedObject, onUpdateProperty }) {
             {['left', 'center', 'right'].map((align) => (
               <button
                 key={align}
-                onClick={() => onUpdateProperty('textAlign', align)}
+                type="button"
+                onClick={() => handleAlignChange(align)}
                 className={`p-1.5 rounded border text-xs transition-colors ${
-                  currentTextAlign === align
+                  textAlign === align
                     ? 'bg-blue-50 border-blue-600 text-blue-600'
                     : 'bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-50'
                 }`}
@@ -208,15 +270,15 @@ export function PropertiesPanel({ selectedObject, onUpdateProperty }) {
       <div className="space-y-1 pt-1 border-t border-neutral-100">
         <div className="flex justify-between text-[10px] font-medium text-neutral-500">
           <span>Opacity</span>
-          <span className="font-mono text-neutral-700">{currentOpacity}%</span>
+          <span className="font-mono text-neutral-700">{opacity}%</span>
         </div>
         <input
           type="range"
           min="10"
           max="100"
           step="1"
-          value={currentOpacity}
-          onChange={(e) => onUpdateProperty('opacity', parseFloat(e.target.value) / 100)}
+          value={opacity}
+          onChange={(e) => handleOpacityChange(e.target.value)}
           className="w-full accent-blue-600 cursor-pointer h-1.5 bg-neutral-200 rounded"
         />
       </div>
