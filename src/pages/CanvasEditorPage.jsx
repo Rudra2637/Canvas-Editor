@@ -87,8 +87,8 @@ export function CanvasEditorPage() {
 
   const handleTitleChange = useCallback((newTitle) => {
     setTitle(newTitle);
-    scheduleAutoSave();
-  }, [scheduleAutoSave]);
+    manualSave(newTitle); // Immediately persist title rename
+  }, [manualSave]);
 
   if (loadError) {
     return (
@@ -115,7 +115,7 @@ export function CanvasEditorPage() {
         title={title}
         onTitleChange={handleTitleChange}
         saveStatus={saveStatus}
-        onManualSave={manualSave}
+        onManualSave={() => manualSave(title)}
       />
 
       {/* Hero Canvas Area */}
