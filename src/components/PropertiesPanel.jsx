@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Bold,
   Italic,
@@ -23,7 +23,6 @@ const PRESET_COLORS = [
 ];
 
 export function PropertiesPanel({ selectedObject, onUpdateProperty }) {
-  // Only render when an object IS selected — keep the canvas completely clean otherwise
   if (!selectedObject) {
     return null;
   }
@@ -32,10 +31,15 @@ export function PropertiesPanel({ selectedObject, onUpdateProperty }) {
   const isText = objType === 'i-text' || objType === 'text' || objType === 'textbox';
   const isPath = objType === 'path';
 
+  // Read current values directly from the object
   const currentFill = selectedObject.fill || '#2563eb';
   const currentStroke = selectedObject.stroke || '#111827';
-  const currentStrokeWidth = selectedObject.strokeWidth || 0;
+  const currentStrokeWidth = typeof selectedObject.strokeWidth === 'number' ? selectedObject.strokeWidth : 0;
   const currentOpacity = Math.round((selectedObject.opacity ?? 1) * 100);
+  const currentFontSize = selectedObject.fontSize || 22;
+  const currentFontWeight = selectedObject.fontWeight || 'normal';
+  const currentFontStyle = selectedObject.fontStyle || 'normal';
+  const currentTextAlign = selectedObject.textAlign || 'left';
 
   return (
     <aside className="absolute top-4 right-4 z-20 w-64 bg-white border border-neutral-200 rounded-xl shadow-lg p-3.5 flex flex-col gap-3 text-neutral-800 select-none animate-in fade-in duration-100">
@@ -53,7 +57,7 @@ export function PropertiesPanel({ selectedObject, onUpdateProperty }) {
         <div className="space-y-1.5">
           <div className="flex items-center justify-between text-[11px] font-medium text-neutral-600">
             <span>Fill Color</span>
-            <span className="font-mono text-[10px] text-neutral-400">{currentFill}</span>
+            <span className="font-mono text-[10px] text-neutral-400 uppercase">{currentFill}</span>
           </div>
 
           <div className="flex items-center gap-1.5 flex-wrap">
@@ -83,8 +87,8 @@ export function PropertiesPanel({ selectedObject, onUpdateProperty }) {
       {/* 2. Stroke / Border */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between text-[11px] font-medium text-neutral-600">
-          <span>{isPath ? 'Stroke Color' : 'Border'}</span>
-          <span className="font-mono text-[10px] text-neutral-400">{currentStroke}</span>
+          <span>{isPath ? 'Stroke Color' : 'Border Color'}</span>
+          <span className="font-mono text-[10px] text-neutral-400 uppercase">{currentStroke}</span>
         </div>
 
         <div className="flex items-center gap-1.5 flex-wrap">
@@ -109,7 +113,7 @@ export function PropertiesPanel({ selectedObject, onUpdateProperty }) {
           />
         </div>
 
-        {/* Stroke Width Slider */}
+        {/* Border Thickness Slider */}
         <div className="space-y-1 pt-1">
           <div className="flex justify-between text-[10px] text-neutral-500 font-medium">
             <span>Border Thickness</span>
@@ -119,9 +123,10 @@ export function PropertiesPanel({ selectedObject, onUpdateProperty }) {
             type="range"
             min="0"
             max="16"
+            step="1"
             value={currentStrokeWidth}
-            onChange={(e) => onUpdateProperty('strokeWidth', Number(e.target.value))}
-            className="w-full accent-blue-600 cursor-pointer h-1 bg-neutral-200 rounded"
+            onChange={(e) => onUpdateProperty('strokeWidth', parseInt(e.target.value, 10))}
+            className="w-full accent-blue-600 cursor-pointer h-1.5 bg-neutral-200 rounded"
           />
         </div>
       </div>
@@ -132,15 +137,16 @@ export function PropertiesPanel({ selectedObject, onUpdateProperty }) {
           <div className="space-y-1">
             <div className="flex justify-between text-[10px] font-medium text-neutral-500">
               <span>Font Size</span>
-              <span className="font-mono text-neutral-700">{selectedObject.fontSize || 24}px</span>
+              <span className="font-mono text-neutral-700">{currentFontSize}px</span>
             </div>
             <input
               type="range"
               min="12"
-              max="72"
-              value={selectedObject.fontSize || 24}
-              onChange={(e) => onUpdateProperty('fontSize', Number(e.target.value))}
-              className="w-full accent-blue-600 cursor-pointer h-1 bg-neutral-200 rounded"
+              max="96"
+              step="1"
+              value={currentFontSize}
+              onChange={(e) => onUpdateProperty('fontSize', parseInt(e.target.value, 10))}
+              className="w-full accent-blue-600 cursor-pointer h-1.5 bg-neutral-200 rounded"
             />
           </div>
 
@@ -148,11 +154,11 @@ export function PropertiesPanel({ selectedObject, onUpdateProperty }) {
           <div className="flex items-center gap-1 pt-0.5">
             <button
               onClick={() => {
-                const isBold = selectedObject.fontWeight === 'bold';
+                const isBold = currentFontWeight === 'bold';
                 onUpdateProperty('fontWeight', isBold ? 'normal' : 'bold');
               }}
               className={`p-1.5 rounded border text-xs font-bold transition-colors ${
-                selectedObject.fontWeight === 'bold'
+                currentFontWeight === 'bold'
                   ? 'bg-blue-50 border-blue-600 text-blue-600'
                   : 'bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-50'
               }`}
@@ -163,11 +169,11 @@ export function PropertiesPanel({ selectedObject, onUpdateProperty }) {
 
             <button
               onClick={() => {
-                const isItalic = selectedObject.fontStyle === 'italic';
+                const isItalic = currentFontStyle === 'italic';
                 onUpdateProperty('fontStyle', isItalic ? 'normal' : 'italic');
               }}
               className={`p-1.5 rounded border text-xs transition-colors ${
-                selectedObject.fontStyle === 'italic'
+                currentFontStyle === 'italic'
                   ? 'bg-blue-50 border-blue-600 text-blue-600'
                   : 'bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-50'
               }`}
@@ -183,7 +189,7 @@ export function PropertiesPanel({ selectedObject, onUpdateProperty }) {
                 key={align}
                 onClick={() => onUpdateProperty('textAlign', align)}
                 className={`p-1.5 rounded border text-xs transition-colors ${
-                  selectedObject.textAlign === align
+                  currentTextAlign === align
                     ? 'bg-blue-50 border-blue-600 text-blue-600'
                     : 'bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-50'
                 }`}
@@ -208,9 +214,10 @@ export function PropertiesPanel({ selectedObject, onUpdateProperty }) {
           type="range"
           min="10"
           max="100"
+          step="1"
           value={currentOpacity}
-          onChange={(e) => onUpdateProperty('opacity', Number(e.target.value) / 100)}
-          className="w-full accent-blue-600 cursor-pointer h-1 bg-neutral-200 rounded"
+          onChange={(e) => onUpdateProperty('opacity', parseFloat(e.target.value) / 100)}
+          className="w-full accent-blue-600 cursor-pointer h-1.5 bg-neutral-200 rounded"
         />
       </div>
     </aside>

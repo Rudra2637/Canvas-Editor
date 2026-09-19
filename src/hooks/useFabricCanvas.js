@@ -19,6 +19,7 @@ export function useFabricCanvas({ onCanvasChange } = {}) {
 
   const [activeTool, setActiveTool] = useState('select'); // 'select' | 'rect' | 'circle' | 'text' | 'pen'
   const [selectedObject, setSelectedObject] = useState(null);
+  const [objectRevision, setObjectRevision] = useState(0); // Reactive trigger for property updates
   const [brushColor, setBrushColor] = useState('#111827');
   const [brushWidth, setBrushWidth] = useState(3);
   const [fillColor, setFillColor] = useState('#2563eb');
@@ -95,6 +96,7 @@ export function useFabricCanvas({ onCanvasChange } = {}) {
     try {
       await canvas.loadFromJSON(JSON.parse(previousState));
       canvas.requestRenderAll();
+      setSelectedObject(canvas.getActiveObject() || null);
       if (onCanvasChangeRef.current) onCanvasChangeRef.current();
     } catch (err) {
       console.error('Error during undo:', err);
@@ -115,6 +117,7 @@ export function useFabricCanvas({ onCanvasChange } = {}) {
     try {
       await canvas.loadFromJSON(JSON.parse(nextState));
       canvas.requestRenderAll();
+      setSelectedObject(canvas.getActiveObject() || null);
       if (onCanvasChangeRef.current) onCanvasChangeRef.current();
     } catch (err) {
       console.error('Error during redo:', err);
@@ -147,23 +150,10 @@ export function useFabricCanvas({ onCanvasChange } = {}) {
     fabricCanvasRef.current = canvas;
     setIsReady(true);
 
-    const handleSelectionCreated = (e) => {
-      const selected = e.selected && e.selected.length > 0 ? e.selected[0] : null;
-      setSelectedObject(selected);
-      if (selected) {
-        setFillColor(selected.fill || '#2563eb');
-        setStrokeColor(selected.stroke || '#111827');
-        setStrokeWidth(selected.strokeWidth || 0);
-      }
-    };
-
-    const handleSelectionUpdated = (e) => {
-      const selected = e.selected && e.selected.length > 0 ? e.selected[0] : null;
-      setSelectedObject(selected);
-    };
-
-    const handleSelectionCleared = () => {
-      setSelectedObject(null);
+    const syncSelection = () => {
+      const activeObj = canvas.getActiveObject();
+      setSelectedObject(activeObj || null);
+      setObjectRevision((r) => r + 1);
     };
 
     const notifyMutation = () => {
@@ -175,21 +165,30 @@ export function useFabricCanvas({ onCanvasChange } = {}) {
       }
     };
 
-    canvas.on('selection:created', handleSelectionCreated);
-    canvas.on('selection:updated', handleSelectionUpdated);
-    canvas.on('selection:cleared', handleSelectionCleared);
+    canvas.on('selection:created', syncSelection);
+    canvas.on('selection:updated', syncSelection);
+    canvas.on('selection:cleared', () => {
+      setSelectedObject(null);
+      setObjectRevision((r) => r + 1);
+    });
 
-    canvas.on('object:modified', notifyMutation);
+    canvas.on('object:modified', () => {
+      syncSelection();
+      notifyMutation();
+    });
+
     canvas.on('object:added', () => {
       if (!isInternalUpdateRef.current) {
         notifyMutation();
       }
     });
+
     canvas.on('object:removed', () => {
       if (!isInternalUpdateRef.current) {
         notifyMutation();
       }
     });
+
     canvas.on('path:created', notifyMutation);
 
     if (pendingDataRef.current) {
@@ -239,7 +238,6 @@ export function useFabricCanvas({ onCanvasChange } = {}) {
     }
   }, [activeTool, brushColor, brushWidth]);
 
-  // Object Styling Presets with single functional accent selection handles
   const configureControlHandles = (obj) => {
     obj.set({
       cornerColor: '#ffffff',
@@ -274,6 +272,8 @@ export function useFabricCanvas({ onCanvasChange } = {}) {
     configureControlHandles(rect);
     canvas.add(rect);
     canvas.setActiveObject(rect);
+    setSelectedObject(rect);
+    setObjectRevision((r) => r + 1);
     canvas.requestRenderAll();
   }, [fillColor, strokeColor, strokeWidth]);
 
@@ -299,6 +299,8 @@ export function useFabricCanvas({ onCanvasChange } = {}) {
     configureControlHandles(circle);
     canvas.add(circle);
     canvas.setActiveObject(circle);
+    setSelectedObject(circle);
+    setObjectRevision((r) => r + 1);
     canvas.requestRenderAll();
   }, [fillColor, strokeColor, strokeWidth]);
 
@@ -324,6 +326,8 @@ export function useFabricCanvas({ onCanvasChange } = {}) {
     configureControlHandles(text);
     canvas.add(text);
     canvas.setActiveObject(text);
+    setSelectedObject(text);
+    setObjectRevision((r) => r + 1);
     canvas.requestRenderAll();
   }, []);
 
@@ -340,6 +344,7 @@ export function useFabricCanvas({ onCanvasChange } = {}) {
     canvas.discardActiveGroup ? canvas.discardActiveGroup() : canvas.discardActiveObject();
     canvas.requestRenderAll();
     setSelectedObject(null);
+    setObjectRevision((r) => r + 1);
   }, []);
 
   const clearCanvas = useCallback(() => {
@@ -349,19 +354,39 @@ export function useFabricCanvas({ onCanvasChange } = {}) {
     canvas.backgroundColor = '#ffffff';
     canvas.requestRenderAll();
     setSelectedObject(null);
+    setObjectRevision((r) => r + 1);
     pushHistoryState();
     if (onCanvasChangeRef.current) onCanvasChangeRef.current();
   }, [pushHistoryState]);
 
+  // Robust, real-time object mutation handler
   const updateSelectedObject = useCallback((property, value) => {
     const canvas = fabricCanvasRef.current;
     if (!canvas || !selectedObject) return;
 
-    selectedObject.set(property, value);
+    // Handle special cases
+    if (property === 'strokeWidth' && value > 0 && !selectedObject.stroke) {
+      selectedObject.set('stroke', strokeColor || '#111827');
+    }
+
+    if (property === 'fontSize' && selectedObject.isType && selectedObject.isType('i-text', 'text', 'textbox')) {
+      // If object had scaling, normalize it so fontSize reflects exact pt size
+      selectedObject.set({
+        fontSize: value,
+        scaleX: 1,
+        scaleY: 1
+      });
+    } else {
+      selectedObject.set(property, value);
+    }
+
+    selectedObject.setCoords();
     canvas.requestRenderAll();
+    setObjectRevision((r) => r + 1);
+
     pushHistoryState();
     if (onCanvasChangeRef.current) onCanvasChangeRef.current();
-  }, [selectedObject, pushHistoryState]);
+  }, [selectedObject, strokeColor, pushHistoryState]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -409,6 +434,7 @@ export function useFabricCanvas({ onCanvasChange } = {}) {
     activeTool,
     setActiveTool,
     selectedObject,
+    objectRevision,
     brushColor,
     setBrushColor,
     brushWidth,
