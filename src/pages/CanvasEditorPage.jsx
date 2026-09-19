@@ -45,6 +45,8 @@ export function CanvasEditorPage() {
 
   const {
     saveStatus,
+    autoSaveEnabled,
+    setAutoSaveEnabled,
     scheduleAutoSave,
     manualSave
   } = useAutoSave(canvasId, fabricCanvas, title);
@@ -110,11 +112,13 @@ export function CanvasEditorPage() {
 
   return (
     <div className="h-screen w-screen flex flex-col bg-neutral-100 overflow-hidden select-none">
-      {/* Thin 44px Header */}
+      {/* Thin 44px Header with Auto-Save Toggle & Manual Save */}
       <Navbar
         title={title}
         onTitleChange={handleTitleChange}
         saveStatus={saveStatus}
+        autoSaveEnabled={autoSaveEnabled}
+        onToggleAutoSave={() => setAutoSaveEnabled((prev) => !prev)}
         onManualSave={() => manualSave(title)}
       />
 

@@ -13,6 +13,8 @@ export function Navbar({
   title,
   onTitleChange,
   saveStatus,
+  autoSaveEnabled,
+  onToggleAutoSave,
   onManualSave
 }) {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -78,9 +80,9 @@ export function Navbar({
         )}
       </div>
 
-      {/* Right: Save Status & Actions */}
+      {/* Right: Auto-Save, Status, Manual Save & Share */}
       <div className="flex items-center gap-2">
-        {/* Functional Save Status Badge */}
+        {/* Live Cloud Save Status Badge */}
         <div className="flex items-center gap-1.5 text-xs text-neutral-500 px-2 py-0.5">
           {saveStatus === 'saving' && (
             <>
@@ -108,7 +110,26 @@ export function Navbar({
           )}
         </div>
 
-        <div className="h-3.5 w-px bg-neutral-200 mx-1" />
+        {/* Auto-Save Toggle Switch */}
+        <button
+          onClick={onToggleAutoSave}
+          className={`flex items-center gap-1.5 px-2 py-1 text-xs font-medium rounded border transition-colors ${
+            autoSaveEnabled
+              ? 'bg-neutral-50 border-neutral-300 text-neutral-700 hover:bg-neutral-100'
+              : 'bg-neutral-100 border-neutral-200 text-neutral-400 hover:text-neutral-600'
+          }`}
+          title="Toggle Auto-Save"
+        >
+          <span
+            className={`w-1.5 h-1.5 rounded-full ${
+              autoSaveEnabled ? 'bg-blue-600' : 'bg-neutral-400'
+            }`}
+          />
+          <span className="hidden sm:inline">Auto-save:</span>
+          <span>{autoSaveEnabled ? 'ON' : 'OFF'}</span>
+        </button>
+
+        <div className="h-3.5 w-px bg-neutral-200 mx-0.5" />
 
         {/* Share Link Button */}
         <button
@@ -128,7 +149,7 @@ export function Navbar({
           ) : (
             <>
               <Share2 className="w-3 h-3" />
-              <span>Share</span>
+              <span className="hidden sm:inline">Share</span>
             </>
           )}
         </button>
@@ -137,7 +158,7 @@ export function Navbar({
         <button
           onClick={onManualSave}
           className="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded transition-colors shadow-sm"
-          title="Save canvas"
+          title="Manual Save"
         >
           <Save className="w-3 h-3" />
           <span>Save</span>
